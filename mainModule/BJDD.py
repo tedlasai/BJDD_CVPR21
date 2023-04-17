@@ -44,7 +44,7 @@ class BJDD:
         self.inputC = int(config['inputC'])
         self.outputC = int(config['outputC'])
         self.scalingFactor = int(config['scalingFactor'])
-        self.binnigFactor = int(config['binnigFactor'])
+        self.binningFactor = int(config['binningFactor'])
         self.totalEpoch = int(config['epoch'])
         self.interval = int(config['interval'])
         self.learningRate = float(config['learningRate'])
@@ -260,9 +260,10 @@ class BJDD:
             self.resultDir = outputDir
         
 
-        modelInference = inference(gridSize=self.binnigFactor, inputRootDir=self.testImagesPath, outputRootDir=self.resultDir, modelName=self.modelName, validation=validation)
+        modelInference = inference(gridSize=self.binningFactor, inputRootDir=self.testImagesPath, outputRootDir=self.resultDir, modelName=self.modelName, validation=validation)
 
         testImageList = modelInference.testingSetProcessor()
+        print("TEST", testImageList)
         barVal = ProgressBar(len(testImageList) * len(noiseSet), max_width=int(50))
         imageCounter = 0
         with torch.no_grad():

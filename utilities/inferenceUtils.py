@@ -44,49 +44,53 @@ class inference():
 
 
     def inputForInference(self, imagePath, noiseLevel):
-        img = Image.open(imagePath)
-        #print(imagePath, img.size)
-        #print (img.size)
-        '''if  img.size[0]>1024:
-            print("Image Resized",imagePath, img.size)
-            resizeDimension =  (1024, img.size[1]) 
-            img = img.resize(resizeDimension)
-            print ("New Image Dimesion:", img.size)
-            img.save(imagePath) 
-
-        if  img.size[1]>1024:
-            print("Image Resized",imagePath, img.size)
-            resizeDimension =  (img.size[0], 1024) 
-            img = img.resize(resizeDimension)
-            print ("New Image Dimesion:", img.size)
-            img.save(imagePath)''' 
-
-        if  img.size[0]<600 or img.size[1]<600:
-            #print("Image Resized",imagePath, img.size)
-            resizeDimension =  (512, 512) 
-            img = img.resize(resizeDimension)
-            #print ("New Image Dimesion:", img.size)
-            img.save(imagePath) 
-
-        if  ("McM" in imagePath) or ("WED" in imagePath) or ("BSD" in imagePath):
-            #print("Image Resized",imagePath, img.size)
-            resizeDimension =  (512, 512) 
-            img = img.resize(resizeDimension)
-            img.save(imagePath) 
-        if "Urban" in imagePath:
-            #print("Image Resized",imagePath, img.size)
-            resizeDimension =  (1024, 1024) 
-            img = img.resize(resizeDimension)
-            img.save(imagePath)  
-
-        img = np.asarray(img) 
+        #img = Image.open(imagePath)
+        img = np.load(imagePath)
+        img = img[0:512, 0:512]
+        # #print(imagePath, img.size)
+        # #print (img.size)
+        # '''if  img.size[0]>1024:
+        #     print("Image Resized",imagePath, img.size)
+        #     resizeDimension =  (1024, img.size[1])
+        #     img = img.resize(resizeDimension)
+        #     print ("New Image Dimesion:", img.size)
+        #     img.save(imagePath)
+        #
+        # if  img.size[1]>1024:
+        #     print("Image Resized",imagePath, img.size)
+        #     resizeDimension =  (img.size[0], 1024)
+        #     img = img.resize(resizeDimension)
+        #     print ("New Image Dimesion:", img.size)
+        #     img.save(imagePath)'''
+        #
+        # if  img.size[0]<600 or img.size[1]<600:
+        #     #print("Image Resized",imagePath, img.size)
+        #     resizeDimension =  (512, 512)
+        #     img = img.resize(resizeDimension)
+        #     #print ("New Image Dimesion:", img.size)
+        #     img.save(imagePath)
+        #
+        # if  ("McM" in imagePath) or ("WED" in imagePath) or ("BSD" in imagePath):
+        #     #print("Image Resized",imagePath, img.size)
+        #     resizeDimension =  (512, 512)
+        #     img = img.resize(resizeDimension)
+        #     img.save(imagePath)
+        # if "Urban" in imagePath:
+        #     #print("Image Resized",imagePath, img.size)
+        #     resizeDimension =  (1024, 1024)
+        #     img = img.resize(resizeDimension)
+        #     img.save(imagePath)
+        #
+        #img = np.asarray(img)
+        #FIX THIS
         if self.gridSize == 1 : 
             img = bayerSampler(img)
         elif self.gridSize == 2 : 
             img = quadBayerSampler(img)
         elif self.gridSize == 3 : 
             img = dynamicBayerSampler(img, gridSze)
-        img = Image.fromarray(img)
+        print(img.shape)
+       # img = Image.fromarray(img)
 
         if self.resize:
             #resize(256,256)
@@ -97,9 +101,11 @@ class inference():
                                         transforms.Normalize(normMean, normStd),
                                         AddGaussianNoise(noiseLevel=noiseLevel)])
 
-        testImg = transform(img).unsqueeze(0)
+        testImg = transform(img).unsqueeze(0).type(torch.FloatTensor)
 
-        return testImg 
+        return testImg
+
+    #this is all 8-bit land
 
 
     def saveModelOutput(self, modelOutput, inputImagePath, noiseLevel, step = None, ext = ".png"):
@@ -110,7 +116,13 @@ class inference():
         else:
             imageSavingPath = self.outputRootDir + self.modelName  + "/"  + datasetName + "/" + extractFileName(inputImagePath, True)  + \
                             "_sigma_" + str(noiseLevel) + "_" + self.modelName + ext
-        
+        print("SSAVING IMAGE", imageSavingPath)
+        gt = np.load('/home/tedlasai/demosaic_baseline/Crops/crop_2.npy')
+        gt = np.moveaxis(gt, (0,1,2), (1,2,0))
+        gt = gt[:, 0:512, 0:512]
+        diff = np.clip(self.unNormalize(modelOutput[0]).cpu().numpy(), 0, 1) -gt
+        print("DIFF", diff.shape)
+        print(np.mean(np.linalg.norm(diff, axis=0)))
         save_image(self.unNormalize(modelOutput[0]), imageSavingPath)
 
     
@@ -118,6 +130,7 @@ class inference():
     def testingSetProcessor(self):
 
         testSets = glob.glob(self.inputRootDir+"*/")
+
         #print (testSets)
         if self.validation:
             #print(self.validation)
